@@ -9,6 +9,7 @@ Note that all operations have a cloud (internet) interaction.  This implementati
 * In the *Drivers Code* section of Hubitat, add the juiceNetSystem and juiceNetUnit drivers.
 * In the *Devices* section of Hubitat, add a *New Virtual Device* of type JuiceNet System
 * On the configuration page for the newly created *Device*, enter your JuiceNet API token from your JuiceNet dashboard and *Save Preferences*.
+    * This can be found by logging into home.juice.net and then opening your User Profile view.
 * Use the *createChildDevices* command to generate a child JuiceNet Unit device for each configured charging unit in your system.
 
 # Usage instructions:
