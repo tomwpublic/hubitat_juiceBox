@@ -20,4 +20,4 @@ Note that all operations have a cloud (internet) interaction.  This implementati
 
 # Disclaimer
 
-I have no affiliation with any of the companies mentioned in this readme or in the code.  I also don't have a JuiceBox charger, so my ability to troubleshoot will be limited.
+I have no affiliation with any of the companies mentioned in this readme or in the code.  I also don't have a JuiceBox, so my ability to troubleshoot will be limited.
