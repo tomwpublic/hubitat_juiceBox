@@ -1,0 +1,27 @@
+{
+  "packageName": "hubitat_juiceBox",
+  "author": "tomw",
+  "version": "1.0.0",
+  "minimumHEVersion": "2.1.9",
+  "dateReleased": "2021-01-25",
+  "drivers": [
+    {
+      "id": "dbd0d37c-6574-45d2-92b8-a2a4ce5873b0",
+      "name": "JuiceNet System",
+      "namespace": "tomw",
+      "location": "https://raw.githubusercontent.com/tomwpublic/hubitat_juiceBox/main/juiceNetSystem",
+      "required": true
+    },
+    {
+      "id": "09948a95-1e71-4ec7-87f1-d9932262b5a4",
+      "name": "JuiceNet Unit",
+      "namespace": "tomw",
+      "location": "https://raw.githubusercontent.com/tomwpublic/hubitat_juiceBox/main/juiceNetUnit",
+      "required": true
+    }
+  ],
+  "licenseFile": "https://raw.githubusercontent.com/tomwpublic/hubitat_juiceBox/main/LICENSE",
+  "releaseNotes": "1.0.0 - @tomw - Initial release.",
+  "documentationLink": "https://github.com/tomwpublic/hubitat_juiceBox/blob/main/README.md",
+  "communityLink": "https://community.hubitat.com/u/tomw/summary"
+}
