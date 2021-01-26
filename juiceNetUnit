@@ -1,0 +1,121 @@
+/*
+
+Copyright 2021 - tomw
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+-------------------------------------------
+
+Change history:
+
+1.0.0 - @tomw - Initial release
+
+*/
+
+metadata
+{
+    definition(name: "JuiceNet Unit", namespace: "tomw", author: "tomw", importUrl: "")
+    {
+        capability "Initialize"
+        capability "EnergyMeter"
+        capability "PowerMeter"
+        capability "Refresh"
+        capability "RelaySwitch"
+        capability "Switch"
+        capability "VoltageMeasurement"
+        
+        command "setOverride"
+        command "clearOverride"
+    }
+}
+
+preferences
+{
+    section
+    {
+        input "token", "text", title: "current token for this unit", required: true
+    }
+}
+
+def updated()
+{
+    initialize()
+}
+
+def initialize()
+{
+    sendEvent(name: "energy", value: "unknown")
+    sendEvent(name: "power", value: "unknown")
+    sendEvent(name: "switch", value: "unknown")
+    sendEvent(name: "voltage", value: "unknown")
+    
+    refresh()
+}
+
+def refresh()
+{
+    def resp_json = readState()
+    if(resp_json)
+    {
+        sendEvent(name: "energy", value: resp_json.charging?.wh_energy)
+        sendEvent(name: "power", value: resp_json.charging?.watt_power)
+        sendEvent(name: "switch", value: ["charging"].contains(resp_json.charging?.state?.toString()) ? "on" : "off")
+        sendEvent(name: "voltage", value: resp_json.charging?.voltage)
+    }
+}
+
+def setupUnit(unit)
+{
+    device.updateSetting("token", unit?.token)
+}
+
+def readState()
+{
+    def reqData = [cmd: "get_state", device_id: "hubitat", account_token: parent.getSetting("apiToken"), token: token]
+    return parent?.httpExec("POST", parent.genParamsMain("box_api_secure", parent.genReqMain(reqData)), false)?.data
+}
+
+def setOverride(set)
+{
+    def resp_json = readState()
+    if(resp_json)
+    {
+        def energy_at_plugin = 0
+        def override_time = set ? resp_json.unit_time : 0
+        def energy_to_add = set ? resp_json.charging.wh_energy_to_add : 0
+        
+        def reqData = [cmd: "set_override", device_id: "hubitat", account_token: parent.getSetting("apiToken"), token: token,
+                       energy_at_plugin: energy_at_plugin, override_time: override_time, energy_to_add: energy_to_add]
+        return parent?.httpExec("POST", parent.genParamsMain("box_api_secure", parent.genReqMain(reqData)), false)?.data
+    }
+}
+
+def setOverride()
+{
+    setOverride(true)
+}
+
+def clearOverride()
+{
+    setOverride(false)
+}
+
+def on()
+{
+    setOverride()
+}
+
+def off()
+{
+    clearOverride()
+}
