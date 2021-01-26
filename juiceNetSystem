@@ -1,0 +1,272 @@
+/*
+
+Copyright 2021 - tomw
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+-------------------------------------------
+
+Change history:
+
+1.0.0 - @tomw - Initial release
+
+*/
+
+metadata
+{
+    definition(name: "JuiceNet System", namespace: "tomw", author: "tomw", importUrl: "")
+    {
+        capability "Initialize"
+        capability "Refresh"
+        
+        command "createChildDevices"
+        command "deleteChildDevices"
+        
+        attribute "commStatus", "string"        
+    }
+}
+
+preferences
+{
+    section
+    {
+        input "apiToken", "text", title: "JuiceNet API Token", required: true
+        input "refreshInterval", "number", title: "Polling refresh interval in seconds", defaultValue: 60
+        input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: true
+    }
+}
+
+def logDebug(msg) 
+{
+    if (logEnable)
+    {
+        log.debug(msg)
+    }
+}
+
+def initialize()
+{
+    sendEvent(name: "commStatus", value: "unknown")
+    
+    try
+    {
+        readAccountUnits()
+        refresh()
+    }
+    catch (Exception e)
+    {
+        logDebug("initialize() failed: ${e.message}")
+        return
+    }
+}
+
+def updated()
+{
+    configure()
+}
+
+def configure()
+{
+    state.clear
+    
+    initialize()
+}
+
+def refresh()
+{
+    unschedule(refresh)
+    
+    for(child in getChildDevices())
+    {
+        child.refresh()
+    }
+    
+    runIn(refreshInterval ?: 60, refresh)
+}
+
+def uninstalled()
+{
+    unschedule()
+}
+
+def createChildDevices()
+{
+    try
+    {
+        for(unit in getAccountUnits())
+        {
+            def child = findChildDevice(unit)
+            if(!child)
+            {
+                child = createChildDevice(unit)
+            }
+            
+            if(child)
+            {
+                child.setupUnit(unit)
+            }
+        }
+    }
+    catch (Exception e)
+    {
+        logDebug("createChildDevices() failed: ${e.message}")
+        return
+    }
+}
+
+def deleteChildDevices()
+{
+    for(child in getChildDevices())
+    {
+        deleteChildDevice(child.deviceNetworkId)
+    }
+}
+
+def childName(unit)
+{
+    return "${unit.name.toString()}"
+}
+
+def childDni(unit)
+{
+    return "${unit.unit_id.toString()}"
+}
+
+def findChildDevice(unit)
+{
+    return getChildDevice(childDni(unit))
+}
+
+def createChildDevice(unit)
+{
+    try
+    {
+        addChildDevice("JuiceNet Unit", childDni(unit), [name: childName(unit), label: childName(unit), isComponent: false])        
+    }
+    catch (Exception e)
+    {
+        logDebug("createChildDevice() failed: ${e.message}")
+        
+        throw(e)
+    }
+}
+
+def readAccountUnits()
+{
+    try
+    {
+        def reqData = [cmd: "get_account_units", device_id: "hubitat", account_token: apiToken]
+        def resp = httpExec("POST", genParamsMain("box_pin", genReqMain(reqData)), true)
+        
+        if(resp)
+        {
+            setAccountUnits(resp?.data?.units)
+        }
+        
+        sendEvent(name: "commStatus", value: "good")
+    }
+    catch (Exception e)
+    {
+        logDebug("readAccountUnits() failed: ${e.message}")
+        sendEvent(name: "commStatus", value: "error")
+        
+        throw(e)
+    }        
+}
+
+def setAccountUnits(units)
+{
+    state.units = units
+}
+
+def getAccountUnits()
+{
+    return state.units
+}
+
+def getBaseURI()
+{
+    return "https://jbv1-api.emotorwerks.com/"
+}
+
+def genParamsMain(suffix, body = null)
+{
+    def params =
+        [
+            uri: getBaseURI() + suffix,
+            requestContentType: 'application/json'
+        ]    
+    
+    if(body)
+    {
+        params['body'] = body
+    }
+ 
+    return params
+}
+
+def genReqMain(reqData)
+{
+    return new groovy.json.JsonOutput().toJson(reqData)
+}
+
+def httpPostExec(params, throwToCaller = false)
+{
+    logDebug("httpPostExec(${params})")
+    
+    try
+    {
+        def result
+        httpPost(params)
+        { resp ->
+            if (resp)
+            {
+                logDebug("resp.data = ${resp.data}")
+                result = resp
+            }
+        }
+        return result
+    }
+    catch (Exception e)
+    {
+        logDebug("httpPostExec() failed: ${e.message}")
+        //logDebug("status = ${e.getResponse().getStatus().toInteger()}")
+        if(throwToCaller)
+        {
+            throw(e)
+        }
+    }
+}
+
+def httpExec(operation, params, throwToCaller = false)
+{
+    def res
+    
+    switch(operation)
+    {
+        default:
+            logDebug("unsupported Http operation")
+        
+            if(throwToCaller)
+            {
+                throw new Exception("unsupported Http operation")
+            }
+            break
+        
+        case "POST":
+            res = httpPostExec(params, throwToCaller)
+            break
+    }
+    
+    return res
+}
