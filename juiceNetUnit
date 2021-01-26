@@ -69,7 +69,7 @@ def refresh()
     {
         sendEvent(name: "energy", value: resp_json.charging?.wh_energy)
         sendEvent(name: "power", value: resp_json.charging?.watt_power)
-        sendEvent(name: "switch", value: ["charging"].contains(resp_json.charging?.state?.toString()) ? "on" : "off")
+        sendEvent(name: "switch", value: ["charging"].contains(resp_json.state?.toString()) ? "on" : "off")
         sendEvent(name: "voltage", value: resp_json.charging?.voltage)
     }
 }
